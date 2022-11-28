@@ -1,21 +1,26 @@
 # https://github.com/ArthurGartner/tutorials/blob/e81dd251fc65affad049f57d5159ec23e05282a6/platforms/aws/lambda/felixyu/lambdacrud/lamnda_function.py
 # https://www.youtube.com/watch?v=9eHh946qTIk
+# Ctrl+Shift+Alt+L
 
 import json
 import boto3
 from custom_encoder import CustomEncoder
 import logging
 from boto3.dynamodb.conditions import Key
+from datetime import datetime
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 user_table_name = "User"
 daycare_table_name = "Daycares"
+booking_table_name = "Bookings"
+
 dynamodb = boto3.resource('dynamodb', region_name=str("ap-south-1"))
 
 userPath = "/user"
 daycarePath = "/daycare"
+bookingPath = "/booking"
 
 getMethod = "GET"
 postMethod = "POST"
@@ -24,6 +29,7 @@ deleteMethod = "DELETE"
 
 user_table = dynamodb.Table(user_table_name)
 daycare_table = dynamodb.Table(daycare_table_name)
+booking_table = dynamodb.Table(booking_table_name)
 
 
 def lambda_handler(event, context):
@@ -39,7 +45,7 @@ def lambda_handler(event, context):
         elif httpMethod == patchMethod:
             requestBody = json.loads(event['body'])
             response = update_user(requestBody['username'],
-                                  requestBody['updateKey'], requestBody['updateValue'])
+                                   requestBody['updateKey'], requestBody['updateValue'])
         else:
             response = buildResponse(404, 'User URL Not Found')
 
@@ -52,6 +58,14 @@ def lambda_handler(event, context):
 
         else:
             response = buildResponse(404, 'Daycare URL Not Found')
+
+    elif path == bookingPath:
+        if httpMethod == getMethod:
+            response = display_booking(event['queryStringParameters']['username'])
+        elif httpMethod == postMethod:
+            response = create_booking(json.loads(event['body']))
+        else:
+            response = buildResponse(404, 'Booking URL Not Found')
 
     else:
         response = buildResponse(404, 'URL Not Found')
@@ -78,9 +92,9 @@ def get_user(username):
 def display_daycares():
     try:
         print("Displaying daycares")
-        #Change scan to query when we want to scale
+        # Change scan to query when we want to scale
         response = daycare_table.scan(ProjectionExpression="daycareID, #daycare_name, image",
-                                       ExpressionAttributeNames={'#daycare_name': 'name'})
+                                      ExpressionAttributeNames={'#daycare_name': 'name'})
         print(json.dumps(response))
         if 'Items' in response:
             return buildResponse(200, response['Items'])
@@ -90,10 +104,12 @@ def display_daycares():
     except:
         logger.exception('Exception thrown on displaying daycares')
 
+
 def get_daycare_info(daycare_id):
     print("Getting daycare info for daycare " + daycare_id)
     try:
         response = daycare_table.query(KeyConditionExpression=Key('daycareID').eq(daycare_id))
+
         if 'Items' in response:
             return buildResponse(200, response['Items'])
         else:
@@ -157,6 +173,39 @@ def update_user(username, updateKey, updateValue):
         return buildResponse(200, body)
     except:
         logger.exception('Error updating user')
+
+
+def create_booking(requestBody):
+    try:
+        print("Creating new booking for user %s" % requestBody["bookingID"])
+
+        booking_table.put_item(
+            Item=requestBody)
+
+        body = {
+            'Operation': 'CREATE NEW BOOKING',
+            'Message': 'SUCCESS',
+            'Item': requestBody
+        }
+
+        return buildResponse(200, body)
+
+    except:
+        logger.exception('Exception thrown on creating booking')
+
+
+def display_booking(username):
+    currentTime = datetime.now().isoformat()
+    print("Getting booking info for user " + username)
+    try:
+        response = booking_table.query(KeyConditionExpression=Key('bookingID').eq(username)
+                                                              & Key("endTime").gt(currentTime))
+        if 'Items' in response:
+            return buildResponse(200, response['Items'])
+        else:
+            return buildResponse(404, {'Message': 'Booking not found for user %s' % username})
+    except:
+        logger.exception('Exception thrown on getting daycare info')
 
 
 def buildResponse(statusCode, body=None):
