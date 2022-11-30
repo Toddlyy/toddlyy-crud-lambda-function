@@ -7,7 +7,9 @@ import boto3
 from custom_encoder import CustomEncoder
 import logging
 from boto3.dynamodb.conditions import Key
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -63,7 +65,7 @@ def lambda_handler(event, context):
         if httpMethod == getMethod:
             response = display_booking(event['queryStringParameters']['username'])
         elif httpMethod == postMethod:
-            response = create_booking(json.loads(event['body']))
+            response = create_booking(json.loads(event['body'], parse_float=Decimal))
         else:
             response = buildResponse(404, 'Booking URL Not Found')
 
@@ -175,6 +177,7 @@ def update_user(username, updateKey, updateValue):
         logger.exception('Error updating user')
 
 
+#BOOKING ID = USERNAME OF USER FOR NOW(Will change while scaling up)
 def create_booking(requestBody):
     try:
         print("Creating new booking for user %s" % requestBody["bookingID"])
@@ -195,11 +198,11 @@ def create_booking(requestBody):
 
 
 def display_booking(username):
-    currentTime = datetime.now().isoformat()
+    cutOffTime = (datetime.now(ZoneInfo('Asia/Kolkata')) + timedelta(hours=1)).isoformat()[:26]
     print("Getting booking info for user " + username)
     try:
         response = booking_table.query(KeyConditionExpression=Key('bookingID').eq(username)
-                                                              & Key("endTime").gt(currentTime))
+                                                              & Key("endTime").gt(cutOffTime))
         if 'Items' in response:
             return buildResponse(200, response['Items'])
         else:
