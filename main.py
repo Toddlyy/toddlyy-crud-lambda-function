@@ -111,8 +111,22 @@ def get_daycare_info(daycare_id):
     print("Getting daycare info for daycare " + daycare_id)
     try:
         response = daycare_table.query(KeyConditionExpression=Key('daycareID').eq(daycare_id))
+        
+        ##### tO GET URL OF IMAGES ####
+        s3_client = boto3.client('s3')
+        url_prefix = 'https://toddlyybucket.s3.ap-south-1.amazonaws.com/'
 
+        images_list = []
+
+        for key in s3_client.list_objects(Bucket='toddlyybucket',Prefix=daycare_id)['Contents']:
+            images_list.append(url_prefix + key['Key'])
+   
+        images_list.pop(0)
+        
+        ################################
+                
         if 'Items' in response:
+            response['Items'].append(images_list)
             return buildResponse(200, response['Items'])
         else:
             return buildResponse(404, {'Message': 'Daycare %s not found' % daycare_id})
