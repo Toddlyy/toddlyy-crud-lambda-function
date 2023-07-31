@@ -95,8 +95,8 @@ def display_daycares():
     try:
         print("Displaying daycares")
         # Change scan to query when we want to scale
-        response = daycare_table.scan(ProjectionExpression="daycareID, #daycare_name, image",
-                                      ExpressionAttributeNames={'#daycare_name': 'name'})
+        response = daycare_table.scan(ProjectionExpression="daycareID, #daycare_name, image, #region_name",
+                                      ExpressionAttributeNames={'#daycare_name': 'name', '#region_name': 'region'})
         print(json.dumps(response))
         if 'Items' in response:
             return buildResponse(200, response['Items'])
