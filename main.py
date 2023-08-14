@@ -35,7 +35,7 @@ booking_table = dynamodb.Table(booking_table_name)
 
 
 def lambda_handler(event, context):
-    print(event)
+    # print(event)
     httpMethod = event['httpMethod']
     path = event['path']
 
@@ -77,7 +77,7 @@ def lambda_handler(event, context):
 
 def get_user(username):
     try:
-        print("Displaying user info")
+        # print("Displaying user info")
 
         response = user_table.get_item(Key={
             'username': username
@@ -93,11 +93,11 @@ def get_user(username):
 
 def display_daycares():
     try:
-        print("Displaying daycares")
+        # print("Displaying daycares")
         # Change scan to query when we want to scale
         response = daycare_table.scan(ProjectionExpression="daycareID, #daycare_name, image, #region_name",
                                       ExpressionAttributeNames={'#daycare_name': 'name', '#region_name': 'region'})
-        print(json.dumps(response))
+        # print(json.dumps(response))
         if 'Items' in response:
             return buildResponse(200, response['Items'])
         else:
@@ -108,7 +108,7 @@ def display_daycares():
 
 
 def get_daycare_info(daycare_id):
-    print("Getting daycare info for daycare " + daycare_id)
+    # print("Getting daycare info for daycare " + daycare_id)
     try:
         response = daycare_table.query(KeyConditionExpression=Key('daycareID').eq(daycare_id))
         
@@ -136,15 +136,15 @@ def get_daycare_info(daycare_id):
 
 def create_user(requestBody):
     try:
-        print("Adding a user")
-        print("requestBody = " + requestBody["username"])
+        # print("Adding a user")
+        # print("requestBody = " + requestBody["username"])
 
         response = user_table.get_item(Key={
             'username': requestBody["username"]
         })
 
         if 'Item' in response:
-            print("User exists")
+            # print("User exists")
             update_user(requestBody["username"], "firstName", requestBody["firstName"])
             update_user(requestBody["username"], "lastName", requestBody["lastName"])
             body = {
@@ -155,7 +155,7 @@ def create_user(requestBody):
 
 
         else:
-            print("User doesn't exist")
+            # print("User doesn't exist")
             table_response = user_table.put_item(
                 Item=requestBody)
             body = {
@@ -194,7 +194,7 @@ def update_user(username, updateKey, updateValue):
 #BOOKING ID = USERNAME OF USER FOR NOW(Will change while scaling up)
 def create_booking(requestBody):
     try:
-        print("Creating new booking for user %s" % requestBody["bookingID"])
+        # print("Creating new booking for user %s" % requestBody["bookingID"])
 
         booking_table.put_item(
             Item=requestBody)
@@ -213,7 +213,7 @@ def create_booking(requestBody):
 
 def display_booking(username):
     cutOffTime = (datetime.now(ZoneInfo('Asia/Kolkata')) + timedelta(hours=1)).isoformat()[:26]
-    print("Getting booking info for user " + username)
+    # print("Getting booking info for user " + username)
     try:
         response = booking_table.query(KeyConditionExpression=Key('bookingID').eq(username)
                                                               & Key("endTime").gt(cutOffTime))
